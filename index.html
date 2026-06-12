@@ -1,0 +1,360 @@
+<!DOCTYPE html>
+<html lang="it">
+<head>
+  <meta charset="UTF-8">
+  <meta name="viewport" content="width=device-width, initial-scale=1.0, maximum-scale=1.0, user-scalable=no">
+  <meta name="apple-mobile-web-app-capable" content="yes">
+  <meta name="apple-mobile-web-app-status-bar-style" content="black-translucent">
+  <meta name="apple-mobile-web-app-title" content="Spesa">
+  <title>Spesa</title>
+  <style>
+    *, *::before, *::after { box-sizing: border-box; margin: 0; padding: 0; }
+
+    :root {
+      --bg: #f2f2f7;
+      --card: #ffffff;
+      --accent: #007aff;
+      --danger: #ff3b30;
+      --success: #34c759;
+      --label: #8e8e93;
+      --text: #1c1c1e;
+      --border: #e5e5ea;
+      --radius: 12px;
+    }
+
+    body {
+      font-family: -apple-system, BlinkMacSystemFont, 'SF Pro Text', 'Segoe UI', sans-serif;
+      background: var(--bg);
+      color: var(--text);
+      min-height: 100vh;
+      padding: env(safe-area-inset-top, 20px) 16px env(safe-area-inset-bottom, 20px);
+    }
+
+    header {
+      padding: 20px 4px 16px;
+      display: flex;
+      align-items: baseline;
+      gap: 10px;
+    }
+
+    header h1 {
+      font-size: 32px;
+      font-weight: 700;
+      letter-spacing: -0.5px;
+      color: var(--text);
+    }
+
+    header span {
+      font-size: 14px;
+      color: var(--label);
+      font-weight: 500;
+    }
+
+    .group {
+      background: var(--card);
+      border-radius: var(--radius);
+      overflow: hidden;
+      margin-bottom: 12px;
+    }
+
+    .field {
+      display: flex;
+      align-items: center;
+      padding: 14px 16px;
+      border-bottom: 1px solid var(--border);
+      gap: 12px;
+    }
+
+    .field:last-child { border-bottom: none; }
+
+    .field label {
+      font-size: 15px;
+      font-weight: 500;
+      color: var(--text);
+      min-width: 120px;
+      flex-shrink: 0;
+    }
+
+    .field input,
+    .field select {
+      flex: 1;
+      font-size: 15px;
+      color: var(--text);
+      background: transparent;
+      border: none;
+      outline: none;
+      text-align: right;
+      -webkit-appearance: none;
+      appearance: none;
+      font-family: inherit;
+    }
+
+    .field input::placeholder { color: var(--label); }
+
+    .field select {
+      color: var(--label);
+    }
+
+    .field select.filled { color: var(--text); }
+
+    .field select option { color: var(--text); }
+
+    .field .chevron {
+      color: var(--label);
+      font-size: 12px;
+      margin-left: 4px;
+      flex-shrink: 0;
+    }
+
+    .costo-wrap {
+      position: relative;
+    }
+
+    .costo-wrap::before {
+      content: '€';
+      font-size: 17px;
+      color: var(--label);
+      margin-right: 2px;
+    }
+
+    #costo {
+      font-size: 17px;
+      font-weight: 600;
+      width: 100px;
+    }
+
+    .btn {
+      display: block;
+      width: 100%;
+      padding: 16px;
+      background: var(--accent);
+      color: white;
+      border: none;
+      border-radius: var(--radius);
+      font-size: 17px;
+      font-weight: 600;
+      font-family: inherit;
+      cursor: pointer;
+      margin-top: 8px;
+      transition: opacity 0.15s;
+      -webkit-tap-highlight-color: transparent;
+    }
+
+    .btn:active { opacity: 0.8; }
+    .btn:disabled { opacity: 0.4; }
+
+    /* Toast */
+    .toast {
+      position: fixed;
+      bottom: calc(env(safe-area-inset-bottom, 20px) + 16px);
+      left: 50%;
+      transform: translateX(-50%) translateY(100px);
+      background: #1c1c1e;
+      color: white;
+      padding: 12px 20px;
+      border-radius: 20px;
+      font-size: 15px;
+      font-weight: 500;
+      white-space: nowrap;
+      transition: transform 0.3s cubic-bezier(0.34, 1.56, 0.64, 1);
+      z-index: 999;
+      pointer-events: none;
+    }
+
+    .toast.show {
+      transform: translateX(-50%) translateY(0);
+    }
+
+    .toast.error {
+      background: var(--danger);
+    }
+
+    /* Section label */
+    .section-label {
+      font-size: 12px;
+      font-weight: 600;
+      text-transform: uppercase;
+      letter-spacing: 0.5px;
+      color: var(--label);
+      padding: 0 4px;
+      margin-bottom: 6px;
+      margin-top: 4px;
+    }
+
+    #loading {
+      display: none;
+      text-align: center;
+      padding: 8px;
+      color: var(--label);
+      font-size: 14px;
+    }
+  </style>
+</head>
+<body>
+
+  <header>
+    <h1>Spesa</h1>
+    <span id="dataOggi"></span>
+  </header>
+
+  <p class="section-label">Importo</p>
+  <div class="group">
+    <div class="field">
+      <label>Costo</label>
+      <div class="costo-wrap">
+        <input type="number" id="costo" placeholder="0.00" step="0.01" min="0" inputmode="decimal">
+      </div>
+    </div>
+  </div>
+
+  <p class="section-label">Classificazione</p>
+  <div class="group">
+    <div class="field">
+      <label>Categoria</label>
+      <select id="categoria" onchange="onCategoriaChange()">
+        <option value="">Seleziona</option>
+        <option>Housing</option>
+        <option>Uscite</option>
+        <option>Vizi</option>
+        <option>Trasporti</option>
+        <option>Lifestyle</option>
+        <option>Health</option>
+        <option>Alimentari</option>
+        <option>Tasse e Commissioni</option>
+        <option>Regali</option>
+        <option>Viaggi</option>
+      </select>
+      <span class="chevron">›</span>
+    </div>
+    <div class="field">
+      <label>Subcategoria</label>
+      <select id="subcategoria" disabled>
+        <option value="">Prima la categoria</option>
+      </select>
+      <span class="chevron">›</span>
+    </div>
+    <div class="field">
+      <label>Tipo spesa</label>
+      <select id="tipoSpesa">
+        <option value="">Seleziona</option>
+        <option>SOPRAVVIVENZA</option>
+        <option>COMFORT</option>
+        <option>LUSSO</option>
+        <option>EXTRA LUSSO</option>
+      </select>
+      <span class="chevron">›</span>
+    </div>
+  </div>
+
+  <p class="section-label">Dettaglio</p>
+  <div class="group">
+    <div class="field">
+      <label>Descrizione</label>
+      <input type="text" id="descrizione" placeholder="Opzionale">
+    </div>
+  </div>
+
+  <div id="loading">Invio in corso…</div>
+  <button class="btn" id="btnInvia" onclick="invia()">Registra spesa</button>
+
+  <div class="toast" id="toast"></div>
+
+  <script>
+    // ─── CONFIGURAZIONE ───────────────────────────────────────────────
+    // Incolla qui il tuo URL di Google Apps Script
+    const APPS_SCRIPT_URL = 'https://script.google.com/macros/s/AKfycby32gTrFtUiKJTHJTkYGCEBcQGmgLgNRSO4KjVaDhVYRuklPYWFhLz8hkYMcn8X5Q9O/exec';
+    // ─────────────────────────────────────────────────────────────────
+
+    const subcategorie = {
+      "Housing":              ["Mutuo", "Assicurazione", "Utilities"],
+      "Uscite":               ["Ristorante", "Bar", "Tempo Libero"],
+      "Vizi":                 ["Tabacchi", "Gioco d'azzardo"],
+      "Trasporti":            ["Carburante", "Costi Auto", "Accessori", "Manutenzione"],
+      "Lifestyle":            ["Abbigliamento", "Accessori", "Parrucchiere", "Libri", "Abbonamenti"],
+      "Health":               ["Personal Trainer", "Psicologa", "Palestra", "Spesa medica"],
+      "Alimentari":           ["Spesa", "Integratori"],
+      "Tasse e Commissioni":  ["Multe", "Enasarco", "Tasse", "Commissioni"],
+      "Regali":               ["Regalo", "Offerta"],
+      "Viaggi":               ["Viaggio"]
+    };
+
+    // Mostra data corrente
+    const oggi = new Date();
+    document.getElementById('dataOggi').textContent =
+      oggi.toLocaleDateString('it-IT', { weekday: 'long', day: 'numeric', month: 'long' });
+
+    function onCategoriaChange() {
+      const cat = document.getElementById('categoria').value;
+      const sub = document.getElementById('subcategoria');
+      sub.innerHTML = '';
+      if (cat && subcategorie[cat]) {
+        sub.disabled = false;
+        subcategorie[cat].forEach(s => {
+          const o = document.createElement('option');
+          o.value = s; o.textContent = s;
+          sub.appendChild(o);
+        });
+        sub.classList.add('filled');
+      } else {
+        sub.disabled = true;
+        sub.innerHTML = '<option value="">Prima la categoria</option>';
+        sub.classList.remove('filled');
+      }
+      // Mark selects as filled for color
+      document.getElementById('categoria').classList.toggle('filled', !!cat);
+    }
+
+    document.querySelectorAll('select').forEach(sel => {
+      sel.addEventListener('change', () => {
+        sel.classList.toggle('filled', !!sel.value);
+      });
+    });
+
+    function showToast(msg, isError = false) {
+      const t = document.getElementById('toast');
+      t.textContent = msg;
+      t.className = 'toast' + (isError ? ' error' : '');
+      t.classList.add('show');
+      setTimeout(() => t.classList.remove('show'), 2500);
+    }
+
+    async function invia() {
+      const costo       = document.getElementById('costo').value.trim();
+      const categoria   = document.getElementById('categoria').value;
+      const subcategoria = document.getElementById('subcategoria').value;
+      const tipoSpesa   = document.getElementById('tipoSpesa').value;
+      const descrizione = document.getElementById('descrizione').value.trim();
+
+      if (!costo || !categoria || !subcategoria || !tipoSpesa) {
+        showToast('⚠️ Compila tutti i campi obbligatori', true);
+        return;
+      }
+
+      const btn = document.getElementById('btnInvia');
+      const loading = document.getElementById('loading');
+      btn.disabled = true;
+      loading.style.display = 'block';
+
+      const params = new URLSearchParams({ costo, categoria, subcategoria, tipoSpesa, descrizione });
+      const url = `${APPS_SCRIPT_URL}?${params}`;
+
+      try {
+        await fetch(url, { method: 'GET', mode: 'no-cors' });
+        showToast('✅ Spesa registrata!');
+        // Reset form
+        document.getElementById('costo').value = '';
+        document.getElementById('categoria').value = '';
+        document.getElementById('tipoSpesa').value = '';
+        document.getElementById('descrizione').value = '';
+        onCategoriaChange();
+        document.querySelectorAll('select').forEach(s => s.classList.remove('filled'));
+      } catch (e) {
+        showToast('❌ Errore di connessione', true);
+      } finally {
+        btn.disabled = false;
+        loading.style.display = 'none';
+      }
+    }
+  </script>
+</body>
+</html>
